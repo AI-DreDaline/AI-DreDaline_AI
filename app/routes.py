@@ -3,6 +3,8 @@ from flask import Blueprint, jsonify, request
 from .utils import ASSETS_SVG_DIR
 from app.services.svg_service import parse_svg_inline
 import math
+from adra_core.mapmatch import map_match_osmnx
+
 
 bp = Blueprint("api", __name__)
 
@@ -83,23 +85,27 @@ def routes_generate():
     """
     Body(JSON):
     {
-      "start_point": {"lat": 33.4996, "lng": 126.5312},   // 필수
-      "target_km": 8.0,                                   // 필수
-      "template_name": "star.svg",                        // svg | template_name 중 하나
-      "svg": "<svg ...>...</svg>",                        // 인라인 SVG (선택)
+      "start_point": {"lat": 33.4996, "lng": 126.5312},
+      "target_km": 8.0,
+      "template_name": "star.svg" | (또는 "svg": "<svg ...>"),
       "options": {
         "resample_m": 5.0,
         "simplify_tolerance": 0.5,
-        "rotation_deg": 0.0
+        "rotation_deg": 0.0,
+        "map_match": true,
+        "graph_dist_m": 3000,
+        "sample_step_m": 60,
+        "retune_tolerance": 0.05,   # 목표 대비 허용 오차(비율) 5%
+        "retune_max_iter": 3        # 재스케일-맵매칭 반복 횟수
       }
     }
     """
+    # -------- 입력/파라미터 --------
     try:
         data = request.get_json(force=True) or {}
     except Exception:
         return jsonify({"ok": False, "error": {"code": 400, "message": "Invalid JSON"}}), 400
 
-    # 입력 검증
     start = data.get("start_point") or {}
     if "lat" not in start or "lng" not in start:
         return jsonify({"ok": False, "error": {"code": 400, "message": "start_point.lat and start_point.lng are required"}}), 400
@@ -114,7 +120,7 @@ def routes_generate():
     svg_text = data.get("svg")
     template_name = data.get("template_name")
     if not svg_text and not template_name:
-        return jsonify({"ok": False, "error": {"code": 400, "message": "Provide either 'svg' (inline) or 'template_name'"}}), 400
+        return jsonify({"ok": False, "error": {"code": 400, "message": "Provide either 'svg' or 'template_name'"}}), 400
 
     if template_name:
         p = ASSETS_SVG_DIR / template_name
@@ -122,38 +128,89 @@ def routes_generate():
             return jsonify({"ok": False, "error": {"code": 404, "message": f"Template '{template_name}' not found"}}), 404
         svg_text = p.read_text(encoding="utf-8")
 
-    # 옵션
     opts = data.get("options", {}) or {}
-    resample = float(opts.get("resample_m", 5.0))
-    simplify = float(opts.get("simplify_tolerance", 0.0))
-    rotation_deg = float(opts.get("rotation_deg", 0.0))
+    resample       = float(opts.get("resample_m", 5.0))
+    simplify_tol   = float(opts.get("simplify_tolerance", 0.0))
+    rotation_deg   = float(opts.get("rotation_deg", 0.0))
+    do_match       = bool(opts.get("map_match", True))
+    graph_dist_m   = int(opts.get("graph_dist_m", 3000))
+    sample_step_m  = int(opts.get("sample_step_m", 60))
+    tol_ratio      = float(opts.get("retune_tolerance", 0.05))   # 5%
+    max_iter       = int(opts.get("retune_max_iter", 3))
 
-    # 1) SVG → (x,y) 폴리라인
-    pts_xy = parse_svg_inline(svg_text, resample_m=resample, simplify_tolerance=simplify)
+    # -------- SVG → XY --------
+    pts_xy = parse_svg_inline(svg_text, resample_m=resample, simplify_tolerance=simplify_tol)
     if len(pts_xy) < 2:
         return jsonify({"ok": False, "error": {"code": 422, "message": "SVG parsing returned too few points"}}), 422
 
-    # 2) 목표 길이에 맞게 스케일 결정 (SVG '단위 1'을 몇 m로 볼지)
     L_xy = _poly_len_xy(pts_xy)
     if L_xy <= 0:
         return jsonify({"ok": False, "error": {"code": 422, "message": "Invalid SVG polyline length"}}), 422
-    scale_m_per_unit = (target_km * 1000.0) / L_xy
 
-    # 3) 시작점 기준 lat/lng LineString으로 변환 (맵매칭 전)
+    # SVG 'unit' → meter 스케일
+    target_m = target_km * 1000.0
+    scale_m_per_unit = target_m / L_xy
+
+    # -------- XY → 위경도 (pre-match) --------
     lat0 = float(start["lat"])
     lng0 = float(start["lng"])
     coords = _xy_to_lnglat_scaled(pts_xy, lat0, lng0, scale_m_per_unit, rotation_deg=rotation_deg, center=True)
 
-    # 4) GeoJSON + metrics
+    # -------- 맵매칭 + 후보정 루프 --------
+    if do_match:
+        # 1차 맵매칭
+        coords_mm, length_m = map_match_osmnx(
+            coords_lnglat=coords,
+            center_lat=lat0,
+            center_lng=lng0,
+            graph_dist_m=graph_dist_m,
+            sample_step_m=sample_step_m
+        )
+
+        # 거리 오차가 크면 스케일 재조정 + 재맵매칭 반복
+        iter_count = 0
+        # 안전장치: 스케일 폭주 방지
+        MIN_SCALE, MAX_SCALE = scale_m_per_unit * 0.1, scale_m_per_unit * 10.0
+
+        while length_m > 0 and abs(length_m - target_m) / target_m > tol_ratio and iter_count < max_iter:
+            iter_count += 1
+            # 비례 조정
+            ratio = target_m / max(length_m, 1.0)
+            scale_m_per_unit = max(MIN_SCALE, min(MAX_SCALE, scale_m_per_unit * ratio))
+
+            # 새 스케일로 좌표 재계산
+            coords = _xy_to_lnglat_scaled(pts_xy, lat0, lng0, scale_m_per_unit, rotation_deg=rotation_deg, center=True)
+
+            # 재맵매칭
+            coords_mm, length_m = map_match_osmnx(
+                coords_lnglat=coords,
+                center_lat=lat0,
+                center_lng=lng0,
+                graph_dist_m=graph_dist_m,
+                sample_step_m=sample_step_m
+            )
+
+        # 최종 좌표/길이 선택
+        coords_final = coords_mm if coords_mm else coords
+        final_length = length_m if coords_mm else _poly_len_m(coords_final)
+
+    else:
+        # 맵매칭 생략 시: 하버사인으로 길이 계산
+        coords_final = coords
+        final_length = _poly_len_m(coords_final)
+
+    # -------- 응답 --------
     geojson = {
         "type": "FeatureCollection",
         "features": [{
             "type": "Feature",
-            "properties": {"name": f"Template route ~{target_km:.1f}km (pre-match)"},
-            "geometry": {"type": "LineString", "coordinates": coords}
+            "properties": {
+                "name": f"Template route ~{target_km:.1f}km",
+                "matched": bool(do_match)
+            },
+            "geometry": {"type": "LineString", "coordinates": coords_final}
         }]
     }
-    length_m = _poly_len_m(coords)
 
     return jsonify({
         "ok": True,
@@ -161,11 +218,14 @@ def routes_generate():
             "geojson": geojson,
             "metrics": {
                 "target_km": target_km,
-                "route_length_m": length_m,   # 하버사인 합 (맵매칭 전 공중선 길이)
-                "nodes": len(coords),
+                "route_length_m": final_length,
+                "nodes": len(coords_final),
                 "scale_m_per_unit": scale_m_per_unit
             },
-            "template_points": pts_xy,                           # SVG 좌표계 (디버깅용)
-            "route_points": [[lat, lng] for (lng, lat) in coords]  # [lat, lng] 형태 (편의용)
+            "template_points": pts_xy,
+            "route_points": [[lat, lng] for (lng, lat) in coords_final]
         }
     })
+
+ 
+ 
