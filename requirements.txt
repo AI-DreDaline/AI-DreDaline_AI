@@ -1,0 +1,12 @@
+blinker==1.9.0
+click==8.3.0
+Flask==3.0.0
+itsdangerous==2.2.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+numpy==2.3.4
+scipy==1.16.3
+shapely==2.1.2
+svgpathtools==1.7.1
+svgwrite==1.4.3
+Werkzeug==3.1.3
