@@ -2,13 +2,13 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 from .utils import ASSETS_SVG_DIR
 from app.services.svg_service import parse_svg_inline
-import math
 from adra_core.mapmatch import map_match_osmnx
-
+from adra_core.freefit import free_fit_search
+import math
 
 bp = Blueprint("api", __name__)
 
-# -------------------- basic --------------------
+# -------------------- basics --------------------
 
 @bp.get("/health")
 def health():
@@ -43,19 +43,16 @@ def _xy_to_lnglat_scaled(points_xy, start_lat, start_lng, scale_m_per_unit, rota
         return []
     pts = points_xy[:]
 
-    # 중심 정렬 (시작점 주변에 모양을 배치)
     if center:
         cx = sum(x for x, _ in pts) / len(pts)
         cy = sum(y for _, y in pts) / len(pts)
         pts = [(x - cx, y - cy) for x, y in pts]
 
-    # 회전(도 단위)
     if rotation_deg:
         th = math.radians(rotation_deg)
         c, s = math.cos(th), math.sin(th)
         pts = [(c*x - s*y, s*x + c*y) for x, y in pts]
 
-    # 스케일 → 위경도
     out = []
     for x, y in pts:
         dx_m, dy_m = x * scale_m_per_unit, y * scale_m_per_unit
@@ -87,20 +84,21 @@ def routes_generate():
     {
       "start_point": {"lat": 33.4996, "lng": 126.5312},
       "target_km": 8.0,
-      "template_name": "star.svg" | (또는 "svg": "<svg ...>"),
+      "template_name": "star.svg" | (or "svg": "<svg ...>"),
       "options": {
         "resample_m": 5.0,
         "simplify_tolerance": 0.5,
         "rotation_deg": 0.0,
+        "align_mode": "start_locked" | "free_fit",
         "map_match": true,
         "graph_dist_m": 3000,
         "sample_step_m": 60,
-        "retune_tolerance": 0.05,   # 목표 대비 허용 오차(비율) 5%
-        "retune_max_iter": 3        # 재스케일-맵매칭 반복 횟수
+        "retune_tolerance": 0.05,
+        "retune_max_iter": 3
       }
     }
     """
-    # -------- 입력/파라미터 --------
+    # -------- 입력 --------
     try:
         data = request.get_json(force=True) or {}
     except Exception:
@@ -109,6 +107,8 @@ def routes_generate():
     start = data.get("start_point") or {}
     if "lat" not in start or "lng" not in start:
         return jsonify({"ok": False, "error": {"code": 400, "message": "start_point.lat and start_point.lng are required"}}), 400
+    lat0 = float(start["lat"])
+    lng0 = float(start["lng"])
 
     try:
         target_km = float(data.get("target_km", 2.0))
@@ -116,12 +116,12 @@ def routes_generate():
         return jsonify({"ok": False, "error": {"code": 400, "message": "target_km must be a number"}}), 400
     if target_km <= 0:
         return jsonify({"ok": False, "error": {"code": 400, "message": "target_km must be > 0"}}), 400
+    target_m = target_km * 1000.0
 
     svg_text = data.get("svg")
     template_name = data.get("template_name")
     if not svg_text and not template_name:
         return jsonify({"ok": False, "error": {"code": 400, "message": "Provide either 'svg' or 'template_name'"}}), 400
-
     if template_name:
         p = ASSETS_SVG_DIR / template_name
         if not p.exists():
@@ -132,70 +132,89 @@ def routes_generate():
     resample       = float(opts.get("resample_m", 5.0))
     simplify_tol   = float(opts.get("simplify_tolerance", 0.0))
     rotation_deg   = float(opts.get("rotation_deg", 0.0))
+    align_mode     = (opts.get("align_mode") or "start_locked").lower()
     do_match       = bool(opts.get("map_match", True))
     graph_dist_m   = int(opts.get("graph_dist_m", 3000))
     sample_step_m  = int(opts.get("sample_step_m", 60))
-    tol_ratio      = float(opts.get("retune_tolerance", 0.05))   # 5%
+    tol_ratio      = float(opts.get("retune_tolerance", 0.05))
     max_iter       = int(opts.get("retune_max_iter", 3))
 
     # -------- SVG → XY --------
     pts_xy = parse_svg_inline(svg_text, resample_m=resample, simplify_tolerance=simplify_tol)
     if len(pts_xy) < 2:
         return jsonify({"ok": False, "error": {"code": 422, "message": "SVG parsing returned too few points"}}), 422
-
     L_xy = _poly_len_xy(pts_xy)
     if L_xy <= 0:
         return jsonify({"ok": False, "error": {"code": 422, "message": "Invalid SVG polyline length"}}), 422
 
     # SVG 'unit' → meter 스케일
-    target_m = target_km * 1000.0
     scale_m_per_unit = target_m / L_xy
 
-    # -------- XY → 위경도 (pre-match) --------
-    lat0 = float(start["lat"])
-    lng0 = float(start["lng"])
-    coords = _xy_to_lnglat_scaled(pts_xy, lat0, lng0, scale_m_per_unit, rotation_deg=rotation_deg, center=True)
+    # -------- free_fit / start_locked 분기 --------
+    used_align_mode = align_mode
+    fallback_used = False
+    fit_params = None
+
+    if align_mode == "free_fit":
+        fit = free_fit_search(
+            pts_xy=pts_xy,
+            center_lat=lat0, center_lng=lng0,
+            base_scale_m_per_unit=scale_m_per_unit,
+            graph_dist_m=int(opts.get("graph_dist_m", graph_dist_m)),
+            rot_min_deg=float(opts.get("rot_min_deg", -30)),
+            rot_max_deg=float(opts.get("rot_max_deg", 30)),
+            rot_step_deg=float(opts.get("rot_step_deg", 5)),
+            scale_min_ratio=float(opts.get("scale_min_ratio", 0.9)),
+            scale_max_ratio=float(opts.get("scale_max_ratio", 1.1)),
+            scale_step=float(opts.get("scale_step", 0.05)),
+            shift_radius_m=float(opts.get("shift_radius_m", 200)),
+            shift_step_m=float(opts.get("shift_step_m", 50)),
+        )
+        fit_params = fit.get("best_params")
+        coords = fit.get("best_coords_lnglat") or []
+        if len(coords) < 2:
+            # free_fit 실패 → 시작점 고정 폴백
+            coords = _xy_to_lnglat_scaled(pts_xy, lat0, lng0, scale_m_per_unit,
+                                          rotation_deg=rotation_deg, center=True)
+            used_align_mode = "start_locked(fallback)"
+            fallback_used = True
+    else:
+        coords = _xy_to_lnglat_scaled(pts_xy, lat0, lng0, scale_m_per_unit,
+                                      rotation_deg=rotation_deg, center=True)
 
     # -------- 맵매칭 + 후보정 루프 --------
+    matched_flag = False
     if do_match:
-        # 1차 맵매칭
         coords_mm, length_m = map_match_osmnx(
             coords_lnglat=coords,
-            center_lat=lat0,
-            center_lng=lng0,
-            graph_dist_m=graph_dist_m,
-            sample_step_m=sample_step_m
+            center_lat=lat0, center_lng=lng0,
+            graph_dist_m=graph_dist_m, sample_step_m=sample_step_m
         )
 
-        # 거리 오차가 크면 스케일 재조정 + 재맵매칭 반복
+        # 목표거리 수렴 루프
         iter_count = 0
-        # 안전장치: 스케일 폭주 방지
         MIN_SCALE, MAX_SCALE = scale_m_per_unit * 0.1, scale_m_per_unit * 10.0
-
         while length_m > 0 and abs(length_m - target_m) / target_m > tol_ratio and iter_count < max_iter:
             iter_count += 1
-            # 비례 조정
             ratio = target_m / max(length_m, 1.0)
             scale_m_per_unit = max(MIN_SCALE, min(MAX_SCALE, scale_m_per_unit * ratio))
-
-            # 새 스케일로 좌표 재계산
-            coords = _xy_to_lnglat_scaled(pts_xy, lat0, lng0, scale_m_per_unit, rotation_deg=rotation_deg, center=True)
-
-            # 재맵매칭
+            coords = _xy_to_lnglat_scaled(pts_xy, lat0, lng0, scale_m_per_unit,
+                                          rotation_deg=rotation_deg, center=True)
             coords_mm, length_m = map_match_osmnx(
                 coords_lnglat=coords,
-                center_lat=lat0,
-                center_lng=lng0,
-                graph_dist_m=graph_dist_m,
-                sample_step_m=sample_step_m
+                center_lat=lat0, center_lng=lng0,
+                graph_dist_m=graph_dist_m, sample_step_m=sample_step_m
             )
 
-        # 최종 좌표/길이 선택
-        coords_final = coords_mm if coords_mm else coords
-        final_length = length_m if coords_mm else _poly_len_m(coords_final)
-
+        if len(coords_mm) >= 2:
+            coords_final = coords_mm
+            final_length = length_m
+            matched_flag = True
+        else:
+            coords_final = coords
+            final_length = _poly_len_m(coords_final)
+            matched_flag = False
     else:
-        # 맵매칭 생략 시: 하버사인으로 길이 계산
         coords_final = coords
         final_length = _poly_len_m(coords_final)
 
@@ -206,7 +225,10 @@ def routes_generate():
             "type": "Feature",
             "properties": {
                 "name": f"Template route ~{target_km:.1f}km",
-                "matched": bool(do_match)
+                "matched": matched_flag,
+                "align_mode": used_align_mode,
+                "fallback_used": fallback_used,
+                "fit_params": fit_params
             },
             "geometry": {"type": "LineString", "coordinates": coords_final}
         }]
@@ -226,6 +248,3 @@ def routes_generate():
             "route_points": [[lat, lng] for (lng, lat) in coords_final]
         }
     })
-
- 
- 
