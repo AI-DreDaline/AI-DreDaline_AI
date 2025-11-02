@@ -1,0 +1,8 @@
+{
+  "svg_text": "<svg xmlns='http://www.w3.org/2000/svg'><path d='M10 10 L90 10 L50 90 Z'/></svg>",
+  "target_km": 8.0,
+  "start_lng": 126.5312,
+  "start_lat": 33.4996,
+  "graph_radius_m": 4000,
+  "match_step_m": 80.0
+}
