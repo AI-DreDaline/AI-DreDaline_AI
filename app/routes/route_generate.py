@@ -38,6 +38,8 @@ def generate():
     resample_m = float(data.get("resample_m", 5.0))
     step_m = float(data.get("step_m", 5.0))
     graph_radius_m = int(data.get("graph_radius_m", 3000))
+    match_step_m = float(data.get("match_step_m", 80.0))   # 🔑 추가
+    max_seg_m = float(data.get("max_seg_m", 1500.0))    # 🔑 추가
 
     try:
         # 1) SVG → 포인트(경도/위도 순서로 이동했다고 가정)
@@ -57,6 +59,8 @@ def generate():
             center_lat=start_lat,
             center_lng=start_lng,
             graph_radius_m=graph_radius_m,
+            match_step_m=match_step_m,
+            max_seg_m=max_seg_m
         )
 
         # 3) 응답
