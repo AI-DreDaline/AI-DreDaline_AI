@@ -132,6 +132,7 @@ def generate():
         route_len = max(1e-6, best["route_length_m"])
         cur_target = cur_target * ( (cur_target*1000.0) / route_len )
 
+
     # 반환
     best["iterations"] = tune_iters
     return jsonify(best), 200
