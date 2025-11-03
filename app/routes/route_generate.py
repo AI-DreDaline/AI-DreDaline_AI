@@ -130,7 +130,8 @@ def generate():
             break
         # 다음 타깃 스케일 보정
         route_len = max(1e-6, best["route_length_m"])
-        cur_target = cur_target * ( (cur_target*1000.0) / route_len )
+        ratio = route_len / (cur_target * 1000.0)
+        cur_target = cur_target * ratio
 
 
     # 반환
