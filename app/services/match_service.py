@@ -35,6 +35,34 @@ def haversine_m(a: Tuple[float,float], b: Tuple[float,float]) -> float:
          math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2)
     return 2 * R * math.asin(math.sqrt(s))
 
+def _haversine_m(a: Tuple[float,float], b: Tuple[float,float]) -> float:
+    (lon1, lat1), (lon2, lat2) = a, b
+    R = 6371000.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    s = (math.sin(dlat/2)**2 +
+         math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2)
+    return 2 * R * math.asin(math.sqrt(s))
+
+def prune_small_loops(G, route_nodes: List[int], loop_thresh_m: float = 60.0) -> List[int]:
+    """경로 내 짧은 루프(되돌아감) 제거"""
+    if len(route_nodes) < 3:
+        return route_nodes
+    cleaned = [route_nodes[0]]
+    for n in route_nodes[1:]:
+        cleaned.append(n)
+        # A,B,A 패턴 제거
+        if len(cleaned) >= 3 and cleaned[-1] == cleaned[-3]:
+            # 거리도 아주 짧으면(루프) 중간 점 제거
+            a = G.nodes[cleaned[-3]]
+            b = G.nodes[cleaned[-2]]
+            c = G.nodes[cleaned[-1]]
+            dab = _haversine_m((a["x"], a["y"]), (b["x"], b["y"]))
+            bc  = _haversine_m((b["x"], b["y"]), (c["x"], c["y"]))
+            if (dab + bc) <= loop_thresh_m:
+                cleaned.pop(-2)  # B 제거
+    return cleaned
+
 def throttle_points_by_distance(pts: List[Tuple[float,float]], min_step_m: float) -> List[Tuple[float,float]]:
     """연속 포인트 중 거리가 min_step_m 미만이면 건너뜀 (지그재그 억제)"""
     if not pts:
@@ -101,6 +129,7 @@ def stitch_shortest_paths(G: nx.MultiDiGraph, node_seq: List[int], max_seg_m: fl
     for n in route:
         nd = G.nodes[n]
         coords.append((float(nd["x"]), float(nd["y"])))
+    route = prune_small_loops(G, route, loop_thresh_m=60.0)
     return route, total_len, coords
 
 # --- public ---

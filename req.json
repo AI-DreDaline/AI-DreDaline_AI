@@ -3,11 +3,16 @@
   "target_km": 8.0,
   "start_lng": 126.5312,
   "start_lat": 33.4996,
-  "graph_radius_m": 6000,
-  "match_step_m": 130.0,
-  "max_seg_m": 1000.0,
+
+  "graph_radius_m": 7000,
+  "match_step_m": 150.0,     
+  "max_seg_m": 900.0,    
+
   "auto_tune": true,
-  "tune_iters": 3,
-  "tune_tol_pct": 0.08,
-  "auto_angle_search": true
+  "tune_iters": 4,
+  "tune_tol_pct": 0.06,
+
+  "auto_angle_search": true,
+  "angle_candidates": [0,15,30,45,60,75,90,105,120,135,150,165,
+                       180,195,210,225,240,255,270,285,300,315,330,345]
 }
