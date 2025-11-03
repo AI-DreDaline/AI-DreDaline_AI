@@ -4,84 +4,112 @@ import io
 from typing import List, Tuple, Dict
 import numpy as np
 from shapely.geometry import LineString
-from shapely.affinity import scale, rotate, translate
+from shapely.affinity import scale as shp_scale, rotate as shp_rotate, translate as shp_translate
+from shapely.ops import transform as shp_transform
 from svgpathtools import svg2paths2, Path
+from pyproj import Transformer
 
-# ======================================================
-# 🔹 SVG 파싱 및 처리 유틸
-# ======================================================
 
 def _svg_to_linestring(paths: List[Path], resample_m: float = 5.0) -> LineString:
-    """SVG Path 객체들을 일정 간격으로 샘플링해 LineString으로 변환"""
+    """SVG Path들을 균일 샘플링해서 LineString으로 합치기 (임의단위)"""
     coords = []
     for p in paths:
-        n = max(2, int(p.length() / resample_m))
+        n = max(2, int(p.length() / max(1e-6, resample_m)))
         ts = np.linspace(0, 1, n)
         pts = [p.point(t) for t in ts]
         coords.extend([(pt.real, pt.imag) for pt in pts])
     return LineString(coords)
 
+
 def _scale_to_target_length(ls: LineString, target_m: float) -> Tuple[LineString, float]:
-    """라인을 목표 거리(m)에 맞게 스케일"""
+    """현재(단위less) 길이를 target_m(미터)에 맞추는 스케일 팩터 적용"""
     cur_len = ls.length
-    if cur_len == 0:
+    if cur_len <= 0:
         raise ValueError("SVG path length is zero.")
-    scale_factor = target_m / cur_len
-    scaled = scale(ls, xfact=scale_factor, yfact=scale_factor, origin=(0, 0))
-    return scaled, scale_factor
+    s = target_m / cur_len
+    return shp_scale(ls, xfact=s, yfact=s, origin=(0, 0)), s
 
-def _rotate(ls: LineString, deg: float) -> LineString:
-    return rotate(ls, deg, origin=(0, 0), use_radians=False)
 
-def _move_to_start(ls: LineString, start_xy: Tuple[float, float]) -> LineString:
-    first_x, first_y = ls.coords[0]
-    dx = start_xy[0] - first_x
-    dy = start_xy[1] - first_y
-    return translate(ls, xoff=dx, yoff=dy)
+def _move_first_point_to_origin(ls: LineString) -> LineString:
+    """첫 점을 (0,0)으로 이동"""
+    x0, y0 = ls.coords[0]
+    return shp_translate(ls, xoff=-x0, yoff=-y0)
 
-def _resample(ls: LineString, step_m: float = 5.0) -> LineString:
-    """라인을 일정 간격으로 다시 샘플링"""
-    if ls.length == 0:
+
+def _resample_by_step(ls: LineString, step_m: float) -> LineString:
+    if ls.length <= 0:
         return ls
-    distances = np.arange(0, ls.length, step_m)
-    pts = [ls.interpolate(d) for d in distances]
-    return LineString([(p.x, p.y) for p in pts])
+    # 등간격 샘플 (끝점 포함)
+    n = max(2, int(np.floor(ls.length / max(step_m, 1e-6))) + 1)
+    dists = np.linspace(0.0, ls.length, n)
+    coords = []
+    for d in dists:
+        pt = ls.interpolate(d)  # shapely Point
+        coords.append((pt.x, pt.y))
+    # 연속 중복 제거(수치 오차 방지)
+    dedup = [coords[0]]
+    for x, y in coords[1:]:
+        if (x, y) != dedup[-1]:
+            dedup.append((x, y))
+    return LineString(dedup)
 
-# ======================================================
-# 🔹 외부에서 호출하는 주요 함수
-# ======================================================
 
-def parse_svg(svg_text: str, target_km: float, start_xy: Tuple[float, float],
-              resample_m: float = 5.0, rotate_deg: float = 0.0, step_m: float = 5.0) -> Dict:
+
+def parse_svg(
+    svg_text: str,
+    target_km: float,
+    start_xy: Tuple[float, float],   # (lng, lat)
+    resample_m: float = 5.0,
+    rotate_deg: float = 0.0,
+    step_m: float = 5.0
+) -> Dict:
     """
-    1. SVG 텍스트 파싱
-    2. target_km 길이에 맞게 스케일
-    3. 회전 및 시작점 이동
-    4. 일정 간격으로 재샘플링
+    파이프라인:
+      1) SVG → LineString(임의 단위)
+      2) target 길이(미터)로 스케일
+      3) 회전
+      4) 첫 점을 원점으로 정렬
+      5) EPSG:3857(미터) 좌표계에서 시작점으로 평행이동
+      6) (미터 좌표계에서) step_m 간격 리샘플
+      7) 경도/위도(EPSG:4326)로 역변환 → 반환
     """
-    # 1️⃣ SVG 로드
-    paths, attrs, svg_attrs = svg2paths2(io.StringIO(svg_text))
+    # 0) 변환기 준비
+    to_m = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform
+    to_lonlat = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True).transform
+
+    # 1) SVG 파싱
+    paths, _, _ = svg2paths2(io.StringIO(svg_text))
     if not paths:
         raise ValueError("No valid <path> found in SVG")
 
-    # 2️⃣ Path → LineString
-    line = _svg_to_linestring(paths, resample_m)
+    ls = _svg_to_linestring(paths, resample_m=resample_m)  # 임의단위
 
-    # 3️⃣ 스케일 조정
-    scaled, scale_factor = _scale_to_target_length(line, target_m=target_km * 1000)
+    # 2) 길이(target_km)로 스케일 (여기서 '1 좌표단위'가 '1 m'가 되도록 스케일)
+    target_m = float(target_km) * 1000.0
+    ls, scale_factor = _scale_to_target_length(ls, target_m=target_m)
 
-    # 4️⃣ 회전
-    rotated = _rotate(scaled, rotate_deg)
+    # 3) 회전(미터 평면 가정)
+    if abs(rotate_deg) > 1e-9:
+        ls = shp_rotate(ls, rotate_deg, origin=(0, 0), use_radians=False)
 
-    # 5️⃣ 시작점 이동
-    moved = _move_to_start(rotated, start_xy)
+    # 4) 첫 점을 원점으로
+    ls = _move_first_point_to_origin(ls)
 
-    # 6️⃣ 균일 리샘플링
-    resampled = _resample(moved, step_m)
+    # 5) 시작점(lng,lat)을 EPSG:3857(미터)로 가져와 거기로 이동
+    start_lng, start_lat = start_xy
+    start_x_m, start_y_m = to_m(start_lng, start_lat)  # (m, m)
+    ls = shp_translate(ls, xoff=start_x_m, yoff=start_y_m)
+
+    # 6) 리샘플(step_m) — 3857 좌표계는 미터 단위라 step_m 그대로 사용 가능
+    ls = _resample_by_step(ls, step_m=step_m)
+
+    # 7) EPSG:4326으로 역변환
+    ls_lonlat = shp_transform(to_lonlat, ls)  # (lng, lat)
+    points = list(ls_lonlat.coords)
 
     return {
         "ok": True,
-        "scale_m_per_unit": scale_factor,
-        "template_length_m": resampled.length,
-        "points": list(resampled.coords)
+        "scale_m_per_unit": float(scale_factor),
+        "template_length_m": float(target_m),  # 스케일 후 기대 길이(≈실제)
+        "points": points
     }
