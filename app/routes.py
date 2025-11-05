@@ -219,6 +219,7 @@ def routes_generate():
         final_length = _poly_len_m(coords_final)
 
     # -------- 응답 --------
+    # --- 응답 (시각화용 포함) ---
     geojson = {
         "type": "FeatureCollection",
         "features": [{
@@ -232,8 +233,9 @@ def routes_generate():
             },
             "geometry": {"type": "LineString", "coordinates": coords_final}
         }]
-    }
+}
 
+# ⚡ 추가: 템플릿 / free-fit / 최종 맵매칭 선을 모두 반환
     return jsonify({
         "ok": True,
         "data": {
@@ -244,7 +246,14 @@ def routes_generate():
                 "nodes": len(coords_final),
                 "scale_m_per_unit": scale_m_per_unit
             },
-            "template_points": pts_xy,
-            "route_points": [[lat, lng] for (lng, lat) in coords_final]
+            # --- 여기 추가 ---
+            "template_points": [
+                [lng0, lat0] for (lng0, lat0) in _xy_to_lnglat_scaled(
+                    pts_xy, lat0, lng0, scale_m_per_unit,
+                    rotation_deg=rotation_deg, center=True
+                )
+            ],
+            "route_points": coords if do_match else [],
+            "final_points": coords_final
         }
     })
