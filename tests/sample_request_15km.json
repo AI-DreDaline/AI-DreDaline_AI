@@ -1,0 +1,21 @@
+{
+  "template_name": "star.svg",
+  "start_point": { "lat": 33.4996, "lng": 126.5312 },
+  "target_km": 15.0,
+  "options": {
+    "align_mode": "free_fit",
+    "map_match": true,
+    "resample_m": 5,
+    "simplify_tolerance": 0.5,
+    "graph_dist_m": 3500,
+    "sample_step_m": 50,
+    "rot_min_deg": -30,
+    "rot_max_deg": 30,
+    "rot_step_deg": 5,
+    "scale_min_ratio": 0.9,
+    "scale_max_ratio": 1.1,
+    "scale_step": 0.05,
+    "shift_radius_m": 200,
+    "shift_step_m": 50
+  }
+}
