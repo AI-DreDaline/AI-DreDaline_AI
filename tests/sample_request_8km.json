@@ -1,6 +1,6 @@
 {
   "template_name": "star.svg",
-  "start_point": { "lat": 33.4996, "lng": 126.5312 },
+  "start_point": { "lat": 33.5003, "lng": 126.5297 },
   "target_km": 8.0,
   "options": {
     "align_mode": "free_fit",
