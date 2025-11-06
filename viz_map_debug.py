@@ -4,6 +4,7 @@ import json, pathlib, requests, folium, time
 
 API = "http://127.0.0.1:5001/routes/generate"
 FILES = [
+    "tests/sample_request_5km.json",
     "tests/sample_request_8km.json",
     "tests/sample_request_10km.json",
     "tests/sample_request_15km.json",
