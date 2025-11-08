@@ -1,35 +1,14 @@
-# --- Python / Build ---
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
 *.egg-info/
-build/
-dist/
-
-# --- Virtual Environments ---
-.venv/
-venv/
-env/
-
-# --- Jupyter ---
-.ipynb_checkpoints/
-*.nbconvert.ipynb
-
-# --- OS / Editor ---
-.DS_Store
-.vscode/
-.idea/
-*.code-workspace
-
-# --- Logs / Temp ---
-*.log
-tmp/
-temp/
-*~
-*.swp
-*.swo
-
-# --- Env / Secrets ---
 .env
-.env.*
+.venv/
+# Jupyter
+.ipynb_checkpoints/
+# macOS
+.DS_Store
+# Cache
+*.tmp
+*.log
+#
