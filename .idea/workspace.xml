@@ -5,12 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d1405241-a0a4-43e8-825c-eebad1b10ecf" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/algo/notebook_port.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples/req_10km.json" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/samples/req_15km.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/algo/context.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/algo/legacy_notebook_port.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/algo/mapmatch.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/algo/placement.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/algo/routing.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/algo/scaling.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/algo/svg_loader.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/algo/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/algo/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/algo/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/algo/map_match.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/algo/svg_route.py" beforeDir="false" afterPath="$PROJECT_DIR$/algo/svg_route.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/cache/graph_33.4996_126.5312_3500.pkl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/samples/req_8km.json" beforeDir="false" afterPath="$PROJECT_DIR$/samples/req_8km.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/samples_req_8km.json" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,6 +56,11 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/samples" />
+    </key>
+  </component>
   <component name="RunManager">
     <configuration name="AI-DreDaline_AI" type="PythonConfigurationType" factoryName="Python">
       <module name="AI-DreDaline_AI" />

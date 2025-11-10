@@ -10,7 +10,7 @@ from shapely.ops import substring
 from svgpathtools import svg2paths
 from config import SETTINGS
 from algo.gragh_io import load_graph
-from algo.map_match import map_match_coords
+from algo.mapmatch import map_match_coords
 
 
 @dataclass
