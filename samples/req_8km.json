@@ -3,11 +3,17 @@
   "start_point": { "lat": 33.4996, "lng": 126.5312 },
   "target_km": 8.0,
   "options": {
-    "align_mode": "free_fit",
-    "map_match": true,
-    "graph_dist_m": 3500,
-    "sample_step_m": 50,
-    "resample_m": 5,
-    "simplify_tolerance": 0.5
-  }
+    "svg_path_index": "auto",
+    "svg_samples_per_seg": 80,
+    "svg_simplify": 0.0,
+    "svg_flip_y": true,
+    "canvas_box_frac": 0.60,
+    "global_rot_deg": 0,
+    "sample_step_m": 60,
+    "min_wp_gap_m": 12,
+    "graph_radius_m": 5000,
+    "return_to_start": true,
+    "tol_ratio": 0.08
+  },
+  "save_geojson": true
 }
