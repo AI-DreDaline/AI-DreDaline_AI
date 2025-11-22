@@ -5,16 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d1405241-a0a4-43e8-825c-eebad1b10ecf" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/algo/navigation.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/cache/graphs.pkl/graph_33.4996_126.5312_3500.pkl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/cache/graphs.pkl/graph_33.4996_126.5312_6000.pkl" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/generated/route_10km.geojson" beforeDir="false" afterPath="$PROJECT_DIR$/data/generated/route_10km.geojson" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/generated/route_15km.geojson" beforeDir="false" afterPath="$PROJECT_DIR$/data/generated/route_15km.geojson" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/data/svg/lightning.svg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/result.json" beforeDir="false" afterPath="$PROJECT_DIR$/result.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/samples/req_8km.json" beforeDir="false" afterPath="$PROJECT_DIR$/samples/req_8km.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/algo/navigation.py" beforeDir="false" afterPath="$PROJECT_DIR$/algo/navigation.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -100,7 +92,7 @@
       <updated>1762617688785</updated>
       <workItem from="1762617690144" duration="1039000" />
       <workItem from="1762618737136" duration="4357000" />
-      <workItem from="1763442124197" duration="8409000" />
+      <workItem from="1763442124197" duration="9943000" />
     </task>
     <servers />
   </component>
