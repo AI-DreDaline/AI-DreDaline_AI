@@ -11,6 +11,8 @@ from algo.mapmatch import load_graph_cached, project_graph, graph_to_gdfs, proje
 from algo.svg_loader import svg_to_polyline
 from algo.placement import place_svg_in_graph_bbox
 from algo.scaling import binary_scale_fit
+from algo.navigation import build_guidance_points
+
 
 SET = Settings(); SET.ensure()
 app = Flask(__name__)
@@ -50,6 +52,15 @@ def generate_route():
                            shape_bias_lambda=opt.shape_bias_lambda, anchor_count=opt.anchor_count, use_anchors=opt.use_anchors,
                            connect_from_start=opt.connect_from_start, max_connector_m=opt.max_connector_m,
                            proximity_alpha=opt.proximity_alpha, proximity_max_shift_m=opt.proximity_max_shift_m)
+    # guidance 정보 생성
+    guidance = build_guidance_points(
+        line_proj=fit.route_line_proj,
+        crs_proj=nodes_proj.crs,
+        min_turn_deg=30.0,
+        straight_interval_m=100.0,
+        trigger_distance=15.0,
+    )
+
 
     # logs
     try:
@@ -79,7 +90,8 @@ def generate_route():
             json.dump(fc, f, ensure_ascii=False, indent=2)
         saved_path = str(out_path)
 
-    return jsonify({"ok": True, "data": {"metrics": metrics, "geojson": fc, "saved": saved_path}}), 200
+    return jsonify({"ok": True, "data": {"metrics": metrics, "geojson": fc,"guidance": guidance, "saved": saved_path}}), 200
+
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5001, debug=True)
