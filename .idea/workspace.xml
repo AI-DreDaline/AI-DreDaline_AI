@@ -7,6 +7,7 @@
     <list default="true" id="d1405241-a0a4-43e8-825c-eebad1b10ecf" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/algo/navigation.py" beforeDir="false" afterPath="$PROJECT_DIR$/algo/navigation.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/result_with_guidance.json" beforeDir="false" afterPath="$PROJECT_DIR$/result_with_guidance.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -49,7 +50,7 @@
       <recent name="$PROJECT_DIR$/samples" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Flask server.AI-DreDaline_AI">
     <configuration name="AI-DreDaline_AI" type="PythonConfigurationType" factoryName="Python">
       <module name="AI-DreDaline_AI" />
       <option name="ENV_FILES" value="" />
@@ -73,6 +74,22 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="AI-DreDaline_AI" type="Python.FlaskServer">
+      <module name="AI-DreDaline_AI" />
+      <option name="target" value="$PROJECT_DIR$/app.py" />
+      <option name="targetType" value="PATH" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="launchJavascriptDebuger" value="false" />
+      <method v="2" />
+    </configuration>
   </component>
   <component name="SharedIndexes">
     <attachedChunks>
@@ -92,7 +109,8 @@
       <updated>1762617688785</updated>
       <workItem from="1762617690144" duration="1039000" />
       <workItem from="1762618737136" duration="4357000" />
-      <workItem from="1763442124197" duration="12789000" />
+      <workItem from="1763442124197" duration="13561000" />
+      <workItem from="1764165259865" duration="1123000" />
     </task>
     <servers />
   </component>
