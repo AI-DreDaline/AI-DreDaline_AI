@@ -106,18 +106,16 @@ cat result_with_guidance.json | jq '.data.guidance.guidance_points'
 
 <pre>
 {
-"sequence": 1,
-"type": "turn",
-"lat": 33.49907,
-"lng": 126.53159,
-"direction": "left",
-"angle": -92.7,
-"distance_from_start": 44.4,
-"distance_to_next": 104.4,
-"guidance_id": "TURN_LEFT_50",
-"trigger_distance": 15,
-"km_mark": 1,
-"show_pace": true
+  "sequence": 1,
+  "type": "turn",
+  "lat": 33.49907399999999,
+  "lng": 126.5315989,
+  "direction": "left",
+  "angle": -92.7,
+  "distance_from_start": 44.4,
+  "distance_to_next": 104.4,
+  "guidance_id": "TURN_LEFT_50",
+  "trigger_distance": 50
 }
 </pre>
 
