@@ -123,49 +123,44 @@ cat result_with_guidance.json | jq '.data.guidance.guidance_points'
 
 ## 📚Guidance Templete
 <pre>
-GUIDANCE_TEMPLATES = {
-    # ======================
-    # 1. 회전 안내 (50m / 15m)
-    # ======================
-    # 50m 전 예고
-    "TURN_LEFT_50":   "50미터 앞에서 좌회전하세요.",
-    "TURN_RIGHT_50":  "50미터 앞에서 우회전하세요.",
+GUIDANCE_TEMPLATES = [
 
-    # 15m 전 확정 안내
-    "TURN_LEFT_15":   "곧 좌회전입니다.",
-    "TURN_RIGHT_15":  "곧 우회전입니다.",
+    # 기본 회전
+    ('TURN_LEFT_15',  '15미터 앞에서 좌회전하세요', 'turn'),
+    ('TURN_LEFT_50',  '50미터 앞에서 좌회전하세요', 'turn'),
+    ('TURN_RIGHT_15', '15미터 앞에서 우회전하세요', 'turn'),
+    ('TURN_RIGHT_50', '50미터 앞에서 우회전하세요', 'turn'),
+    ('U_TURN_15',     '15미터 앞에서 유턴하세요', 'turn'),
+    ('U_TURN_50',     '50미터 앞에서 유턴하세요', 'turn'),
 
-    # 각도/강도 기반 특별 턴 (원하면 나중에 angle 보고 매핑)
-    "SLIGHT_LEFT":    "약간 왼쪽으로 이동하세요.",
-    "SLIGHT_RIGHT":   "약간 오른쪽으로 이동하세요.",
-    "SHARP_LEFT":     "급좌회전입니다. 속도를 줄이세요.",
-    "SHARP_RIGHT":    "급우회전입니다. 속도를 줄이세요.",
-    "U_TURN":         "안전한 지점에서 유턴하세요.",
+    # 직진
+    ('GO_STRAIGHT_NEXT', '다음 안내까지 직진하세요', 'straight'),
 
-    # ======================
-    # 2. 직진 안내
-    # ======================
-    "GO_STRAIGHT_50":   "잠시 더 직진하세요.",
-    "GO_STRAIGHT_100":  "다음 안내까지 직진하세요.",
-    "GO_STRAIGHT_LONG": "당분간 직진합니다.",
+    # 약 / 급 회전
+    ('SLIGHT_LEFT',  '약간 왼쪽으로 이동하세요', 'slight'),
+    ('SLIGHT_RIGHT', '약간 오른쪽으로 이동하세요', 'slight'),
+    ('SHARP_LEFT',   '급하게 좌회전하세요', 'sharp'),
+    ('SHARP_RIGHT',  '급하게 우회전하세요', 'sharp'),
 
-    # ======================
-    # 3. 체크포인트 / 완성률 안내
-    # ======================
-    # 1km 마다
-    "CHECKPOINT_KM":     "체크포인트입니다.",  # 실제 문장(예: '5km 달렸습니다')은 프론트에서 km_mark로 생성
+    # 러닝 이벤트
+    ('RUN_START',  '러닝을 시작합니다. 몸의 긴장을 풀고 적절한 페이스로 출발해보세요', 'event'),
+    ('RUN_FINISH', '수고하셨습니다. 러닝을 완료했습니다', 'event'),
 
-    # 그림 완성률 (30%, 50%, 80%)
-    "PROGRESS_30":       "전체 경로의 30%를 달렸습니다.",
-    "PROGRESS_50":       "전체 경로의 절반을 지났습니다.",
-    "PROGRESS_80":       "전체 경로의 80%를 달렸습니다. 거의 다 왔어요!",
+    # 진행률
+    ('PROGRESS_30', '30% 지점에 도달했습니다. 잘하고 있어요', 'progress'),
+    ('PROGRESS_50', '절반 지점에 도착했습니다. 페이스를 유지해보세요', 'progress'),
+    ('PROGRESS_80', '80% 지점입니다. 조금만 더 힘내세요', 'progress'),
 
-    # ======================
-    # 4. 시작/완료/리루트
-    # ======================
-    "ROUTE_START":       "러닝을 시작합니다.",
-    "ROUTE_COMPLETE":    "경로를 완료했습니다. 수고하셨습니다.",
-    "ROUTE_REROUTE":     "경로에서 벗어났습니다. 새로운 경로를 계산합니다."
-}
+    # 체크포인트
+    ('CHECKPOINT_ARRIVED', '체크포인트에 도착했습니다', 'checkpoint'),
+    ('ROUTE_COMPLETE', '경로를 모두 완료했습니다. 고생하셨습니다', 'checkpoint'),
+
+    # 방향 전환 후속 (선택)
+    ('TURN_AFTER_LEFT_STRAIGHT',  '좌회전 후 직진하세요', 'turn'),
+    ('TURN_AFTER_RIGHT_STRAIGHT', '우회전 후 직진하세요', 'turn'),
+
+    # 코스 이탈
+    ('OFF_ROUTE', '경로에서 벗어났습니다. 지도를 확인해주세요', 'alert'),
+]
 </pre>
 
